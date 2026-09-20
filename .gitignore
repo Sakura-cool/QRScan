@@ -13,3 +13,6 @@ icons/icon-source.png
 
 # 本地打包产物（.package 目录）
 /.package/
+
+# 签名密钥（私钥绝不入库；公钥已内嵌 tauri.conf.json）
+/.keys/

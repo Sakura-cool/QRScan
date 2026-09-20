@@ -42,8 +42,10 @@
   .app { max-width: 960px; margin: 0 auto; padding: 24px; }
 
   /* Header */
-  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 20px; }
+  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; gap: 12px; flex-wrap: wrap; }
   .brand { display: flex; align-items: center; gap: 10px; }
+  .header-actions { display: flex; align-items: center; gap: 8px; }
+  .privacy-note { font-size: 13px; color: var(--text-muted); white-space: nowrap; }
   .brand h1 { font-size: 22px; font-weight: 700; }
   .brand .badge {
     font-size: 12px; font-weight: 500; color: var(--primary);
@@ -169,6 +171,26 @@
   @media (prefers-reduced-motion: reduce) {
     * { animation: none !important; transition: none !important; }
   }
+
+  /* Update modal */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 90;
+    background: rgba(15, 23, 42, 0.45);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .modal {
+    background: var(--surface); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow); padding: 24px; max-width: 440px; width: 100%;
+  }
+  .modal h2 { font-size: 16px; font-weight: 600; margin-bottom: 12px; }
+  .update-info { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--text-normal); margin-bottom: 12px; }
+  .update-notes {
+    font-size: 13px; color: var(--text-normal); background: var(--bg);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 12px; margin-bottom: 16px; max-height: 160px; overflow-y: auto;
+    white-space: pre-wrap; word-break: break-all;
+  }
+  .modal-actions, .update-actions { display: flex; justify-content: flex-end; gap: 8px; }
 </style>
 </head>
 <body>
@@ -178,7 +200,10 @@
       <h1>QRScan</h1>
       <span class="badge">批量二维码识别</span>
     </div>
-    <span class="privacy-note">🔒 图片仅在本地识别，不会上传</span>
+    <div class="header-actions">
+      <button class="btn primary" id="capture-btn">📷 截屏识别</button>
+      <span class="privacy-note">🔒 图片仅在本地识别，不会上传</span>
+    </div>
   </header>
 
   <label id="upload-zone" aria-label="上传图片">
@@ -578,6 +603,162 @@
     resultCount.textContent = '0';
     copyAllBtn.disabled = true;
   }
+
+  /* ============ Tauri 桥接（截图 + 更新） ============ */
+  var __TAURI__ = window.__TAURI__;
+  var isTauri = !!(__TAURI__ && __TAURI__.core);
+
+  function tauriInvoke(cmd, args) {
+    return __TAURI__.core.invoke(cmd, args || {});
+  }
+
+  /* --- 截图输入 --- */
+  $('capture-btn').addEventListener('click', function () {
+    if (!isTauri) { showToast('截图功能需在桌面 App 中使用', 'error'); return; }
+    captureBtnClicked();
+  });
+
+  function captureBtnClicked() {
+    var btn = $('capture-btn');
+    btn.disabled = true;
+    btn.textContent = '截屏中…';
+
+    // 先截全屏，再显示遮罩窗口；capture 窗口就绪（capture:ready）后发图
+    tauriInvoke('capture_all')
+      .then(function (pngBytes) {
+        window._capturePng = pngBytes;
+        return tauriInvoke('capture_show');
+      })
+      .catch(function (e) {
+        console.error('capture_all failed', e);
+        showToast('截图失败：' + (e && e.message ? e.message : e), 'error');
+        btn.disabled = false;
+        btn.textContent = '📷 截屏识别';
+      });
+  }
+
+  // capture 窗口加载完成，发送截图数据
+  if (isTauri) {
+    __TAURI__.event.listen('capture:ready', function () {
+      var bytes = window._capturePng;
+      if (!bytes) return;
+      __TAURI__.event.emit('capture:image', bytes).then(function () {
+        var btn = $('capture-btn');
+        btn.disabled = false;
+        btn.textContent = '📷 截屏识别';
+      });
+    });
+  }
+
+  // 监听选区结果：capture 窗口确认后回调
+  if (isTauri) {
+    __TAURI__.event.listen('capture:done', function (evt) {
+      var dataUrl = evt.payload;
+      window._capturePng = null;
+      decodeScreenshot(dataUrl);
+    });
+  }
+
+  function decodeScreenshot(dataUrl) {
+    // 构造伪 File 并复用现有识别链路
+    var img = new Image();
+    img.onload = function () {
+      var canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      canvas.toBlob(function (blob) {
+        if (!blob) { showToast('截图处理失败', 'error'); return; }
+        var file = new File([blob], 'screenshot-' + Date.now() + '.png', { type: 'image/png' });
+        addImage(file);
+        showToast('截图识别完成', 'success');
+      }, 'image/png');
+    };
+    img.onerror = function () { showToast('截图解码失败', 'error'); };
+    img.src = dataUrl;
+  }
+
+  /* --- 自动更新（启动检查一次 + 静默下载 + 覆盖更新时交互） --- */
+  function checkForUpdate() {
+    if (!__TAURI__.updater) return;
+    __TAURI__.updater.check()
+      .then(function (update) {
+        if (!update) return; // 已是最新，静默
+        // 静默下载
+        update.downloadAndInstall()
+          .then(function () {
+            showUpdateDialog(update);
+          })
+          .catch(function (e) {
+            console.error('update download failed', e);
+            showToast('更新下载失败：' + (e && e.message ? e.message : e), 'error');
+          });
+      })
+      .catch(function (e) {
+        console.error('check update failed', e);
+      });
+  }
+
+  function showUpdateDialog(update) {
+    var existing = $('update-modal');
+    if (existing) existing.remove();
+
+    var modal = document.createElement('div');
+    modal.id = 'update-modal';
+    modal.className = 'modal-overlay';
+    modal.innerHTML =
+      '<div class="modal" role="dialog" aria-modal="true" aria-labelledby="update-title">' +
+      '  <h2 id="update-title">🔄 新版本 v' + escapeHtml(update.version) + ' 已就绪</h2>' +
+      '  <div class="update-info">' +
+      '    <p>当前版本：<strong>' + escapeHtml(update.currentVersion) + '</strong></p>' +
+      '    <p>新版本：<strong>' + escapeHtml(update.version) + '</strong></p>' +
+      '  </div>' +
+      '  <div class="update-notes" id="update-notes">' + escapeHtml(update.body || '暂无更新说明') + '</div>' +
+      '  <div class="update-actions">' +
+      '    <button class="btn default" id="update-exit-btn">退出时自动更新</button>' +
+      '    <button class="btn primary" id="update-now-btn">立即更新并重启</button>' +
+      '  </div>' +
+      '</div>';
+    document.body.appendChild(modal);
+
+    // 立即更新：安装并重启
+    $('update-now-btn').addEventListener('click', function () {
+      var btn = $('update-now-btn');
+      btn.disabled = true;
+      btn.textContent = '安装中…';
+      installPendingUpdate(true);
+    });
+
+    // 退出时自动更新：关闭弹窗，App 退出时安装（Tauri updater 安装包已就绪）
+    $('update-exit-btn').addEventListener('click', function () {
+      modal.remove();
+      showToast('将在退出时自动完成更新', 'success');
+    });
+  }
+
+  function installPendingUpdate(relaunch) {
+    __TAURI__.updater.check()
+      .then(function (update) {
+        if (!update) return;
+        return update.downloadAndInstall().then(function () {
+          if (relaunch) {
+            showToast('更新完成，即将重启', 'success');
+            setTimeout(function () { __TAURI__.process.relaunch(); }, 1500);
+          }
+        });
+      })
+      .catch(function (e) {
+        console.error('update install failed', e);
+        showToast('更新失败：' + (e && e.message ? e.message : e), 'error');
+      });
+  }
+
+  // 启动后静默检查一次（有新版本自动下载，下载完成弹窗交互）
+  if (isTauri) {
+    setTimeout(function () { checkForUpdate(); }, 3000);
+  }
+
 
   /* ============ Toast ============ */
   var toastTimer = null;
