@@ -53,7 +53,18 @@ cp -r src-tauri/target/{arch}/release/bundle/*/* .
 
 ### 三端 CI
 
-`.github/workflows/build.yml`：push `v*` tag 自动在 macOS（universal）/ Windows x64 / Ubuntu x64 构建安装包并发布 GitHub Release。
+`.github/workflows/build.yml`：push `main` 或 `v*` tag 自动执行完整流水线：
+
+1. **build**：macOS universal / Windows x64 / Ubuntu x64 三端构建安装包并发布 GitHub Release（Node 24 运行时）
+2. **semgrep**：三通道扫描（自定义规则集 `.github/semgrep/qrscan-rules.yml` + `security-audit` + `rust`），命中即失败，SARIF 上传 GitHub Code Scanning
+3. **sonarqube**：配置 `SONAR_TOKEN` + `SONAR_HOST_URL` secrets 后自动启用（内网 SonarQube 需配置可达地址），未配置时跳过
+
+## 静态扫描
+
+| 工具 | 配置 | 说明 |
+|------|------|------|
+| Semgrep | `.github/semgrep/qrscan-rules.yml` + `p/security-audit` + `p/rust` | 三通道，CI 命中即失败；本地复扫：`semgrep scan --config .github/semgrep/qrscan-rules.yml --metrics off .` |
+| SonarQube | `sonar-project.properties`（本地容器 `sonarqube_se` :9001） | 本地手动：`docker-compose run --rm sonar-scanner-cli -Dsonar.projectBaseDir=/opt/scan -Dsonar.login=<token>` |
 
 ## Git 双远端（同 BatKill）
 
