@@ -1,15 +1,23 @@
-name: Build & Release QRScan
+name: Build, Scan & Release QRScan
 
 on:
   push:
     tags:
       - 'v*'
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
   contents: write
+  security-events: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  # ============ 三端三架构构建发布（Node 24） ============
   build:
     strategy:
       fail-fast: false
@@ -26,7 +34,7 @@ jobs:
             args: '--target x86_64-unknown-linux-gnu'
     runs-on: ${{ matrix.platform }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install Linux system dependencies
         if: matrix.platform == 'ubuntu-22.04'
@@ -42,7 +50,7 @@ jobs:
         run: cargo install tauri-cli --version "^2.0.0" --locked
 
       - name: Build with Tauri
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -57,3 +65,79 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+
+  # ============ Semgrep 持续扫描（三通道 + SARIF） ============
+  semgrep:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Semgrep
+        run: |
+          pip install --quiet semgrep
+          semgrep --version
+
+      - name: Scan with custom rules
+        run: |
+          semgrep scan --config .github/semgrep/qrscan-rules.yml \
+            --metrics off \
+            --exclude target --exclude .package --exclude .github \
+            --sarif -o custom.sarif .
+        continue-on-error: true
+
+      - name: Scan security-audit (frontend)
+        run: |
+          semgrep scan --config p/security-audit \
+            --metrics off \
+            --include "ui/*.html" \
+            --sarif -o audit.sarif .
+        continue-on-error: true
+
+      - name: Scan rust (Tauri shell)
+        run: |
+          semgrep scan --config p/rust \
+            --metrics off \
+            --include "src-tauri/src/*.rs" \
+            --sarif -o rust.sarif src-tauri/
+        continue-on-error: true
+
+      - name: Fail if findings
+        run: |
+          FAIL=0
+          for f in custom.sarif audit.sarif rust.sarif; do
+            [ -f "$f" ] || continue
+            CNT=$(python3 -c "import json;d=json.load(open('$f'));print(len(d.get('runs',[{}])[0].get('results',[])))")
+            echo "$f: $CNT findings"
+            [ "$CNT" != "0" ] && FAIL=1
+          done
+          exit $FAIL
+
+      - name: Upload SARIF to code scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: .
+          category: semgrep
+
+  # ============ SonarQube 分析（secrets 门控） ============
+  sonarqube:
+    runs-on: ubuntu-22.04
+    if: ${{ secrets.SONAR_TOKEN != '' && secrets.SONAR_HOST_URL != '' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        with:
+          args: >
+            -Dsonar.projectKey=qrscan
+            -Dsonar.projectName=QRScan
+            -Dsonar.sources=ui,src-tauri/src
+            -Dsonar.exclusions=ui/lib/**/*,src-tauri/target/**/*,src-tauri/gen/**/*,.package/**/*,.github/**/*,dist/**/*
+            -Dsonar.sourceEncoding=UTF-8
+            -Dsonar.qualitygate.wait=true

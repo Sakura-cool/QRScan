@@ -1,0 +1,108 @@
+# QRScan 自定义 Semgrep 规则集 v1（2026-09-20）
+#
+# 针对 QRScan 技术栈：前端原生 JS/HTML（ui/）+ Rust/Tauri（src-tauri/）
+# 复跑：semgrep scan --config <本文件> --metrics off --exclude .package --exclude target .
+rules:
+  # ============ 前端（HTML/JS）============
+
+  - id: qrscan-dom-xss-via-innerhtml
+    languages: [javascript]
+    paths:
+      include: ["*.html"]
+    severity: WARNING
+    message: >-
+      使用 innerHTML 注入动态内容（含非字面量拼接/插值）。若 content 含用户可控
+      数据（如文件名、二维码内容），会引入 DOM XSS。当前 QRScan 的二维码内容均为
+      浏览器本地数据（无远程输入），但应保持「静态模板 + textContent」写法，
+      仅在明确安全（escapeHtml 处理）的情况下使用字符串拼接。
+    pattern-either:
+      - pattern: document.getElementById($ID).innerHTML = $CONTENT
+      - pattern: $EL.innerHTML = $CONTENT
+    metavariable-regex:
+      metavariable: $CONTENT
+      regex: '^(?!.*"#|.*\\\\''#).*\+|`.*\$\{'  # 仅命中含拼接/插值的动态内容
+
+  - id: qrscan-unsafe-script-src
+    languages: [generic]
+    paths:
+      include: ["*.html"]
+    severity: ERROR
+    message: >-
+      script 标签 src 指向外部地址（http/https/CDN）。应用定位为「本地离线」，
+      依赖外部脚本会导致：离线不可用 + 供应链风险。所有脚本必须本地打包
+      （ui/lib/ 目录）。
+    patterns:
+      - pattern-regex: '<script[^>]*src=["\x27](?:https?:)?//'
+
+  - id: qrscan-inline-event-handler
+    languages: [generic]
+    paths:
+      include: ["*.html"]
+    severity: WARNING
+    message: >-
+      HTML 内联事件处理器（onclick=onload= 等）存在 XSS/维护性风险，
+      CSP 也难以约束。改为 addEventListener 绑定。
+    patterns:
+      - pattern-regex: '<[^>]+\son[a-z]+\s*=[\x27"]'
+
+  - id: qrscan-leaked-api-key-pattern
+    languages: [javascript]
+    paths:
+      include: ["*.html"]
+    severity: ERROR
+    message: >-
+      疑似硬编码 API 密钥/令牌（长随机字符 + 敏感变量名）。密钥不得写入源码。
+    patterns:
+      - pattern-regex: '(api[_-]?key|api[_-]?token|secret|password|passwd|credential)\s*[:=]\s*[\\`"[x27][A-Za-z0-9_\-]{16,}[\\`"[x27]'
+
+  - id: qrscan-eval-dangerous
+    languages: [javascript]
+    severity: WARNING
+    message: >-
+      使用 eval / new Function / setTimeout 传字符串代码。几乎总可以用
+      函数引用替代；字符串形式无法受 CSP 约束。
+    pattern-either:
+      - pattern: eval($ARG)
+      - pattern: new Function($ARG)
+      - pattern: setTimeout("$CODE", ...)
+
+  # ============ Rust / Tauri ============
+
+  - id: qrscan-cargo-panic-unwrap
+    languages: [rust]
+    paths:
+      include: ["src-tauri/src/*.rs"]
+    severity: WARNING
+    message: >-
+      Result/Option 上直接 .unwrap()/.expect()——生产代码对错误路径零容错，
+      任何意外都会 panic 崩溃。改为 ? 传播 + 顶层统一错误处理，或显式 match。
+    pattern-either:
+      - pattern: $EXPR.unwrap()
+      - pattern: $EXPR.expect(...)
+
+  - id: qrscan-dangerous-command
+    languages: [rust]
+    paths:
+      include: ["src-tauri/src/*.rs"]
+    severity: ERROR
+    message: >-
+      使用 shell 命令执行（std::process::Command 直接调 shell 或参数含 shell
+      元字符）。Tauri 应用不得拼接用户输入进 shell。
+    pattern-either:
+      - pattern: Command::new("sh")
+      - pattern: Command::new("bash")
+      - pattern: Command::new("/bin/sh")
+      - pattern: Command::new("/bin/bash")
+      - pattern: Command::new("cmd")
+
+  - id: qrscan-unsafe-command-args
+    languages: [rust]
+    paths:
+      include: ["src-tauri/src/*.rs"]
+    severity: WARNING
+    message: >-
+      Command 参数含字符串拼接（format!/+）。Tauri 若暴露命令到前端，
+      参数拼接可能被注入。参数应逐项 .arg() 传递，禁止 shell 文本拼接。
+    pattern-either:
+      - pattern: $CMD.arg(format!($FMT, $ARGS))
+      - pattern: $CMD.args(vec![$ARG1, $ARG2])
