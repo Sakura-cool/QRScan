@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "QRScan 默认权限：核心能力（窗口/事件）。剪贴板使用 WebView 原生 navigator.clipboard（tauri:// 为安全上下文）。",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

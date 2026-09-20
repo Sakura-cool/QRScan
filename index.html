@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>QRScan · 批量二维码识别</title>
+<style>
+  /* ============ QRScan 设计系统落地（standards/design/DESIGN.md） ============ */
+  :root {
+    --primary: #2563EB;
+    --primary-hover: #1D4ED8;
+    --primary-soft: #EFF6FF;
+    --bg: #F7F8FA;
+    --surface: #FFFFFF;
+    --border: #E3E6EB;
+    --text-strong: #1F2329;
+    --text-normal: #4E5969;
+    --text-muted: #86909C;
+    --success: #00B42A;
+    --success-soft: #E8FFEA;
+    --warning: #FF7D00;
+    --warning-soft: #FFF3E8;
+    --danger: #F53F3F;
+    --danger-soft: #FFECE8;
+    --radius: 8px;
+    --radius-lg: 12px;
+    --shadow: 0 4px 16px rgba(31, 35, 41, 0.08);
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    --mono: "SF Mono", "Consolas", "Menlo", monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text-strong);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .app { max-width: 960px; margin: 0 auto; padding: 24px; }
+
+  /* Header */
+  header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 20px; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand h1 { font-size: 22px; font-weight: 700; }
+  .brand .badge {
+    font-size: 12px; font-weight: 500; color: var(--primary);
+    background: var(--primary-soft); padding: 2px 8px; border-radius: 999px;
+  }
+  .privacy-note { font-size: 13px; color: var(--text-muted); }
+
+  /* Upload zone */
+  #upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    padding: 40px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    user-select: none;
+  }
+  #upload-zone:hover, #upload-zone.dragover { border-color: var(--primary); background: var(--primary-soft); }
+  #upload-zone .icon { font-size: 36px; line-height: 1; }
+  #upload-zone .main-text { margin-top: 12px; font-size: 15px; font-weight: 600; color: var(--text-strong); }
+  #upload-zone .sub-text { margin-top: 4px; font-size: 13px; color: var(--text-muted); }
+
+  /* Sections */
+  section { margin-top: 24px; }
+  .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .section-head h2 { font-size: 16px; font-weight: 600; }
+
+  /* Preview grid */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px;
+    position: relative;
+  }
+  .card .thumb-wrap { position: relative; height: 96px; border-radius: var(--radius); overflow: hidden; background: var(--bg); }
+  .card .thumb { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .card .seq {
+    position: absolute; top: 6px; left: 6px;
+    font-size: 12px; font-weight: 500; color: var(--primary);
+    background: var(--primary-soft); padding: 1px 8px; border-radius: 999px;
+  }
+  .card .status-row { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; gap: 6px; }
+  .card .fname { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card .count-badge { font-size: 12px; font-weight: 500; padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
+  .count-badge.ok { color: var(--success); background: var(--success-soft); }
+  .count-badge.warn { color: var(--warning); background: var(--warning-soft); }
+  .count-badge.loading { color: var(--primary); background: var(--primary-soft); }
+  .spinner {
+    width: 12px; height: 12px; border: 2px solid var(--primary-soft);
+    border-top-color: var(--primary); border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Toolbar */
+  .toolbar { display: flex; align-items: center; gap: 10px; }
+  .count { font-size: 14px; color: var(--text-normal); }
+  .count strong { color: var(--primary); font-size: 16px; }
+
+  /* Buttons */
+  .btn {
+    font-family: var(--font); font-size: 14px; font-weight: 500;
+    border: 1px solid transparent; border-radius: var(--radius);
+    padding: 8px 16px; cursor: pointer; min-height: 36px;
+    transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+  .btn.primary { background: var(--primary); color: #fff; }
+  .btn.primary:hover:not(:disabled) { background: var(--primary-hover); }
+  .btn.default { background: var(--surface); border-color: var(--border); color: var(--text-normal); }
+  .btn.default:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+  .btn.danger { background: var(--danger-soft); color: var(--danger); }
+  .btn.danger.confirming { background: var(--danger); color: #fff; }
+  .btn.sm { padding: 3px 12px; min-height: 28px; font-size: 13px; border-radius: 6px; }
+
+  /* Result list */
+  .result-item {
+    display: flex; gap: 14px; align-items: flex-start;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 12px 16px; margin-bottom: 12px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .result-item:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+  .result-index { font-size: 13px; color: var(--text-muted); min-width: 34px; padding-top: 2px; }
+  .result-body { flex: 1; min-width: 0; }
+  .result-meta { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-normal); margin-bottom: 4px; }
+  .src-tag {
+    font-size: 12px; color: var(--primary); background: var(--primary-soft);
+    padding: 1px 8px; border-radius: 999px; max-width: 240px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .result-text {
+    font-family: var(--mono); font-size: 13px; color: var(--text-strong);
+    word-break: break-all; white-space: pre-wrap; line-height: 1.5;
+  }
+  .result-copy { flex-shrink: 0; margin-top: 2px; }
+  .btn.copied { background: var(--success); border-color: var(--success); color: #fff; }
+
+  /* Empty state */
+  .empty { text-align: center; color: var(--text-muted); padding: 48px 0; }
+  .empty .icon { font-size: 40px; opacity: 0.5; }
+  .empty p { margin-top: 8px; font-size: 14px; }
+
+  /* Toast */
+  #toast {
+    position: fixed; right: 24px; bottom: 24px;
+    background: var(--surface); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow); padding: 12px 20px; font-size: 14px;
+    opacity: 0; transform: translateY(8px); pointer-events: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    z-index: 100; max-width: 360px;
+  }
+  #toast.show { opacity: 1; transform: translateY(0); }
+  #toast .t-success { color: var(--success); font-weight: 600; }
+  #toast .t-error { color: var(--danger); font-weight: 600; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <h1>QRScan</h1>
+      <span class="badge">批量二维码识别</span>
+    </div>
+    <span class="privacy-note">🔒 图片仅在本地识别，不会上传</span>
+  </header>
+
+  <div id="upload-zone" role="button" tabindex="0" aria-label="上传图片">
+    <div class="icon">📁</div>
+    <div class="main-text">点击选择或拖拽图片到此处</div>
+    <div class="sub-text">支持一次选择多张 PNG / JPG / WebP / BMP / GIF</div>
+    <input type="file" id="file-input" accept="image/png,image/jpeg,image/webp,image/bmp,image/gif" multiple hidden />
+  </div>
+
+  <section id="preview-section" hidden>
+    <div class="section-head">
+      <h2>图片预览</h2>
+    </div>
+    <div class="grid" id="preview-grid"></div>
+  </section>
+
+  <section id="results-section" hidden>
+    <div class="section-head">
+      <h2>识别结果</h2>
+      <div class="toolbar">
+        <span class="count">共 <strong id="result-count">0</strong> 条</span>
+        <button class="btn primary" id="copy-all-btn" disabled>📋 复制全部</button>
+        <button class="btn danger" id="clear-btn">🗑 清空</button>
+      </div>
+    </div>
+    <div id="result-list"></div>
+  </section>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="lib/jsqr.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ============ 状态 ============ */
+  /** @type {Array<{id:number, file:File, url:string, status:string, count:number}>} */
+  var images = [];
+  /** @type {Array<{id:string, imageIndex:number, imageName:string, text:string}>} */
+  var results = [];
+  var nextImageId = 1;
+  var clearConfirming = false;
+
+  var MAX_CODE_PER_IMAGE = 100;   // 单图最大识别码数
+  var MAX_IMAGE_EDGE = 2048;      // 识别用画布最大边长（像素）
+
+  var $ = function (id) { return document.getElementById(id); };
+  var uploadZone = $('upload-zone');
+  var fileInput = $('file-input');
+  var previewSection = $('preview-section');
+  var previewGrid = $('preview-grid');
+  var resultsSection = $('results-section');
+  var resultList = $('result-list');
+  var resultCount = $('result-count');
+  var copyAllBtn = $('copy-all-btn');
+  var clearBtn = $('clear-btn');
+
+  /* ============ 上传 ============ */
+  uploadZone.addEventListener('click', function () { fileInput.click(); });
+  uploadZone.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
+  });
+  fileInput.addEventListener('change', function () { handleFiles(fileInput.files); fileInput.value = ''; });
+
+  ['dragenter', 'dragover'].forEach(function (ev) {
+    uploadZone.addEventListener(ev, function (e) { e.preventDefault(); uploadZone.classList.add('dragover'); });
+  });
+  ['dragleave', 'drop'].forEach(function (ev) {
+    uploadZone.addEventListener(ev, function (e) { e.preventDefault(); uploadZone.classList.remove('dragover'); });
+  });
+  uploadZone.addEventListener('drop', function (e) {
+    if (e.dataTransfer && e.dataTransfer.files) handleFiles(e.dataTransfer.files);
+  });
+
+  function handleFiles(fileList) {
+    var accepted = [];
+    for (var i = 0; i < fileList.length; i++) {
+      var f = fileList[i];
+      if (f.type && f.type.indexOf('image/') === 0) accepted.push(f);
+    }
+    if (accepted.length === 0) {
+      showToast('未检测到图片文件，请选择图片格式（PNG/JPG/WebP/BMP/GIF）', 'error');
+      return;
+    }
+    accepted.forEach(function (file) { addImage(file); });
+  }
+
+  function addImage(file) {
+    var item = {
+      id: nextImageId++,
+      file: file,
+      url: URL.createObjectURL(file),
+      status: 'queued',
+      count: 0
+    };
+    images.push(item);
+    previewSection.hidden = false;
+    renderPreviewCard(item);
+    decodeImage(item); // 逐张识别
+  }
+
+  function renderPreviewCard(item) {
+    var card = document.createElement('div');
+    card.className = 'card';
+    card.id = 'img-' + item.id;
+
+    var thumbWrap = document.createElement('div');
+    thumbWrap.className = 'thumb-wrap';
+    var img = document.createElement('img');
+    img.className = 'thumb';
+    img.src = item.url;
+    img.alt = item.file.name;
+    var seq = document.createElement('span');
+    seq.className = 'seq';
+    seq.textContent = String(item.id).padStart(2, '0');
+
+    var statusRow = document.createElement('div');
+    statusRow.className = 'status-row';
+    var fname = document.createElement('span');
+    fname.className = 'fname';
+    fname.textContent = item.file.name;
+    fname.title = item.file.name;
+    var countBadge = document.createElement('span');
+    countBadge.className = 'count-badge loading';
+    countBadge.textContent = '识别中';
+
+    thumbWrap.appendChild(img);
+    thumbWrap.appendChild(seq);
+    statusRow.appendChild(fname);
+    statusRow.appendChild(countBadge);
+    card.appendChild(thumbWrap);
+    card.appendChild(statusRow);
+    previewGrid.appendChild(card);
+
+    // 图片加载失败（损坏文件）
+    img.onerror = function () {
+      countBadge.className = 'count-badge warn';
+      countBadge.textContent = '图片损坏';
+      item.status = 'done';
+    };
+  }
+
+  function updatePreviewCard(item) {
+    var card = $('img-' + item.id);
+    if (!card) return;
+    var badge = card.querySelector('.count-badge');
+    if (item.status === 'decoding') {
+      badge.className = 'count-badge loading';
+      badge.textContent = '识别中';
+    } else if (item.status === 'done') {
+      if (item.count > 0) {
+        badge.className = 'count-badge ok';
+        badge.textContent = item.count + ' 个码';
+      } else {
+        badge.className = 'count-badge warn';
+        badge.textContent = '未识别到二维码';
+      }
+    }
+  }
+
+  /* ============ 识别引擎（jsQR 掩膜重扫循环） ============ */
+  function decodeImage(item) {
+    item.status = 'decoding';
+    updatePreviewCard(item);
+
+    var fileReader = new FileReader();
+    fileReader.onload = function () {
+      var img = new Image();
+      img.onload = function () {
+        var found = scanImageForQRCodes(img, item);
+        item.count = found.length;
+        item.status = 'done';
+
+        found.forEach(function (text) {
+          results.push({
+            id: 'r-' + crypto.randomUUID(),
+            imageIndex: item.id,
+            imageName: item.file.name,
+            text: text
+          });
+        });
+
+        updatePreviewCard(item);
+        renderResults();
+      };
+      img.onerror = function () {
+        item.status = 'done';
+        updatePreviewCard(item);
+      };
+      img.src = fileReader.result;
+    };
+    fileReader.readAsDataURL(item.file);
+  }
+
+  /**
+   * 单图多二维码识别：jsQR 单次只返回一个码，
+   * 识别到后将其包围盒（外扩 MARGIN px）涂白，再重扫，直到扫不到为止。
+   * @returns {string[]} 识别出的二维码内容列表
+   */
+  function scanImageForQRCodes(img, item) {
+    var canvas = document.createElement('canvas');
+    var scale = Math.min(1, MAX_IMAGE_EDGE / Math.max(img.naturalWidth, img.naturalHeight));
+    canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+    var ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return [];
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    var data = imageData.data;
+    var W = canvas.width, H = canvas.height;
+    var MARGIN = Math.max(8, Math.round(Math.min(W, H) * 0.02)); // 外扩边距，覆盖静区
+
+    var found = [];
+    var iter = 0;
+    while (iter++ < MAX_CODE_PER_IMAGE) {
+      var code = jsQR(data, W, H, { inversionAttempts: 'dontInvert' });
+      if (!code || !code.data) break;
+
+      found.push(code.data);
+
+      // 包围盒：四角坐标 → min/max
+      var loc = code.location;
+      var xs = [loc.topLeftCorner.x, loc.topRightCorner.x, loc.bottomLeftCorner.x, loc.bottomRightCorner.x];
+      var ys = [loc.topLeftCorner.y, loc.topRightCorner.y, loc.bottomLeftCorner.y, loc.bottomRightCorner.y];
+      var minX = Math.max(0, Math.floor(Math.min.apply(null, xs)) - MARGIN);
+      var minY = Math.max(0, Math.floor(Math.min.apply(null, ys)) - MARGIN);
+      var maxX = Math.min(W, Math.ceil(Math.max.apply(null, xs)) + MARGIN);
+      var maxY = Math.min(H, Math.ceil(Math.max.apply(null, ys)) + MARGIN);
+
+      paintWhite(data, W, minX, minY, maxX - minX, maxY - minY);
+    }
+    return found;
+  }
+
+  /** 将区域像素涂白（Uint8ClampedArray 原地写，RGB=255, alpha=255） */
+  function paintWhite(data, width, x, y, w, h) {
+    for (var py = y; py < y + h; py++) {
+      var rowOffset = py * width * 4 + x * 4;
+      for (var px = 0; px < w; px++) {
+        var idx = rowOffset + px * 4;
+        data[idx] = 255;     // R
+        data[idx + 1] = 255; // G
+        data[idx + 2] = 255; // B
+        data[idx + 3] = 255; // A
+      }
+    }
+  }
+
+  /* ============ 结果列表 ============ */
+  function renderResults() {
+    resultsSection.hidden = false;
+    resultCount.textContent = String(results.length);
+    copyAllBtn.disabled = results.length === 0;
+    resultList.innerHTML = '';
+
+    if (results.length === 0) {
+      var empty = document.createElement('div');
+      empty.className = 'empty';
+      empty.innerHTML = '<div class="icon">🖼</div><p>暂无识别结果，上传包含二维码的图片后自动识别</p>';
+      resultList.appendChild(empty);
+      return;
+    }
+
+    results.forEach(function (r, idx) {
+      var item = document.createElement('div');
+      item.className = 'result-item';
+
+      var idxEl = document.createElement('div');
+      idxEl.className = 'result-index';
+      idxEl.textContent = '#' + (idx + 1);
+
+      var body = document.createElement('div');
+      body.className = 'result-body';
+
+      var meta = document.createElement('div');
+      meta.className = 'result-meta';
+      var tag = document.createElement('span');
+      tag.className = 'src-tag';
+      tag.textContent = '图' + r.imageIndex + ' · ' + r.imageName;
+      tag.title = r.imageName;
+      meta.appendChild(tag);
+
+      var textEl = document.createElement('div');
+      textEl.className = 'result-text';
+      textEl.textContent = r.text;
+
+      body.appendChild(meta);
+      body.appendChild(textEl);
+
+      var copyBtn = document.createElement('button');
+      copyBtn.className = 'btn default sm result-copy';
+      copyBtn.textContent = '📋 复制';
+      copyBtn.setAttribute('aria-label', '复制第 ' + (idx + 1) + ' 条结果');
+      copyBtn.addEventListener('click', function () {
+        copyText(r.text, function (ok) {
+          if (ok) {
+            flashCopied(copyBtn);
+            showToast('已复制第 ' + (idx + 1) + ' 条结果', 'success');
+          } else {
+            showToast('复制失败，请手动复制', 'error');
+          }
+        });
+      });
+
+      item.appendChild(idxEl);
+      item.appendChild(body);
+      item.appendChild(copyBtn);
+      resultList.appendChild(item);
+    });
+  }
+
+  /* ============ 复制 ============ */
+  /**
+   * 写入剪贴板：优先 Clipboard API，降级 textarea + execCommand。
+   * @param {string} text
+   * @param {function(boolean):void} done
+   */
+  function copyText(text, done) {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(
+        function () { done(true); },
+        function () { legacyCopy(text, done); }
+      );
+    } else {
+      legacyCopy(text, done);
+    }
+  }
+
+  function legacyCopy(text, done) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, ta.value.length);
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    done(ok);
+  }
+
+  function flashCopied(btn) {
+    var original = btn.textContent;
+    btn.textContent = '✓ 已复制';
+    btn.classList.add('copied');
+    btn.disabled = true;
+    setTimeout(function () {
+      btn.textContent = original;
+      btn.classList.remove('copied');
+      btn.disabled = false;
+    }, 1500);
+  }
+
+  copyAllBtn.addEventListener('click', function () {
+    if (results.length === 0) return;
+    var allText = results.map(function (r) { return r.text; }).join('\n');
+    copyText(allText, function (ok) {
+      if (ok) {
+        showToast('已复制全部 ' + results.length + ' 条结果', 'success');
+      } else {
+        showToast('复制失败，请手动复制', 'error');
+      }
+    });
+  });
+
+  /* ============ 清空 ============ */
+  clearBtn.addEventListener('click', function () {
+    if (!clearConfirming) {
+      clearConfirming = true;
+      clearBtn.classList.add('confirming');
+      clearBtn.textContent = '确认清空？';
+      setTimeout(function () {
+        clearConfirming = false;
+        clearBtn.classList.remove('confirming');
+        clearBtn.textContent = '🗑 清空';
+      }, 2000);
+      return;
+    }
+    // 二次确认执行
+    clearConfirming = false;
+    clearBtn.classList.remove('confirming');
+    clearBtn.textContent = '🗑 清空';
+    clearAll();
+  });
+
+  function clearAll() {
+    images.forEach(function (item) { URL.revokeObjectURL(item.url); });
+    images = [];
+    results = [];
+    previewGrid.innerHTML = '';
+    resultList.innerHTML = '';
+    previewSection.hidden = true;
+    resultsSection.hidden = true;
+    resultCount.textContent = '0';
+    copyAllBtn.disabled = true;
+  }
+
+  /* ============ Toast ============ */
+  var toastTimer = null;
+  function showToast(msg, type) {
+    var toast = $('toast');
+    toast.innerHTML = '<span class="t-' + (type || 'success') + '">' + (type === 'error' ? '⚠ ' : '✓ ') + '</span>' +
+      escapeHtml(msg);
+    toast.classList.add('show');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toast.classList.remove('show'); }, 2000);
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+})();
+</script>
+</body>
+</html>
