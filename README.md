@@ -46,13 +46,15 @@ cargo tauri build
 
 ```
 ├── index.html                # 应用本体：HTML + 内联 CSS + 内联 JS（上传/识别/列表/复制）
-├── lib/jsqr.js               # jsQR 识别库（本地单文件）
+├── lib/
+│   ├── zxing_reader.js       # zxing-wasm 读者端 JS 绑定（IIFE，全局 ZXingWASM）
+│   └── zxing_reader.wasm     # zxing-wasm WebAssembly 引擎（本地文件）
 ├── src-tauri/                # Tauri 2 壳工程
 └── .github/workflows/build.yml
 ```
 
 ## 技术要点
 
-- 识别引擎：jsQR（纯 JS）+ 掩膜重扫循环，支持单图多码。
+- 识别引擎：zxing-wasm（官方 ZXing WASM），一次调用识别单图全部二维码。
 - 隐私：全程本地 WebView 处理，无任何网络请求。
 - 轻量：安装包 ~5-10MB（系统 WebView，不内置 Chromium）。

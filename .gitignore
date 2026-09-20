@@ -1,5 +1,9 @@
-# 依赖
+# 依赖与构建产物
 /target/
+/src-tauri/target/
+
+# Tauri 生成代码
+src-tauri/gen/
 
 # 图标源
 icons/icon-source.png

@@ -209,7 +209,7 @@
 
 <div id="toast" role="status" aria-live="polite"></div>
 
-<script src="lib/jsqr.js"></script>
+<script src="lib/zxing_reader.js"></script>
 <script>
 (function () {
   'use strict';
@@ -222,8 +222,21 @@
   var nextImageId = 1;
   var clearConfirming = false;
 
-  var MAX_CODE_PER_IMAGE = 100;   // 单图最大识别码数
   var MAX_IMAGE_EDGE = 2048;      // 识别用画布最大边长（像素）
+
+  // zxing-wasm：定位本地 wasm 文件（默认走 CDN，必须覆盖为本地路径，离线可用）
+  var zxingReady = null;
+  function initZXing() {
+    if (zxingReady) return zxingReady;
+    ZXingWASM.setZXingModuleOverrides({
+      locateFile: function (path, prefix) { return 'lib/' + path; }
+    });
+    // 触发 wasm 初始化（prepare 并缓存 module，避免首次识别卡顿）
+    zxingReady = ZXingWASM.prepareZXingModule({ fireImmediately: true })
+      .then(function () { return true; })
+      .catch(function (e) { console.error('zxing-wasm init failed', e); return false; });
+    return zxingReady;
+  }
 
   var $ = function (id) { return document.getElementById(id); };
   var uploadZone = $('upload-zone');
@@ -339,93 +352,78 @@
     }
   }
 
-  /* ============ 识别引擎（jsQR 掩膜重扫循环） ============ */
+  /* ============ 识别引擎（zxing-wasm，一次识别单图全部码） ============ */
   function decodeImage(item) {
     item.status = 'decoding';
     updatePreviewCard(item);
 
-    var fileReader = new FileReader();
-    fileReader.onload = function () {
-      var img = new Image();
-      img.onload = function () {
-        var found = scanImageForQRCodes(img, item);
-        item.count = found.length;
+    initZXing().then(function (ok) {
+      if (!ok) {
         item.status = 'done';
+        updatePreviewCard(item);
+        showToast('识别引擎初始化失败，请重新打开应用', 'error');
+        return;
+      }
 
-        found.forEach(function (text) {
-          results.push({
-            id: 'r-' + crypto.randomUUID(),
-            imageIndex: item.id,
-            imageName: item.file.name,
-            text: text
+      var fileReader = new FileReader();
+      fileReader.onload = function () {
+        var img = new Image();
+        img.onload = function () {
+          scanImageForQRCodes(img, item).then(function (texts) {
+            item.count = texts.length;
+            item.status = 'done';
+
+            texts.forEach(function (text) {
+              results.push({
+                id: 'r-' + crypto.randomUUID(),
+                imageIndex: item.id,
+                imageName: item.file.name,
+                text: text
+              });
+            });
+
+            updatePreviewCard(item);
+            renderResults();
           });
-        });
-
-        updatePreviewCard(item);
-        renderResults();
+        };
+        img.onerror = function () {
+          item.status = 'done';
+          updatePreviewCard(item);
+        };
+        img.src = fileReader.result;
       };
-      img.onerror = function () {
-        item.status = 'done';
-        updatePreviewCard(item);
-      };
-      img.src = fileReader.result;
-    };
-    fileReader.readAsDataURL(item.file);
+      fileReader.readAsDataURL(item.file);
+    });
   }
 
   /**
-   * 单图多二维码识别：jsQR 单次只返回一个码，
-   * 识别到后将其包围盒（外扩 MARGIN px）涂白，再重扫，直到扫不到为止。
-   * @returns {string[]} 识别出的二维码内容列表
+   * 单图多二维码识别：zxing-wasm readBarcodesFromImageData 一次返回图内全部码。
+   * 大图先等比缩小到 MAX_IMAGE_EDGE 以内，控制识别耗时。
+   * @returns {Promise<string[]>} 识别出的二维码内容列表
    */
-  function scanImageForQRCodes(img, item) {
+  function scanImageForQRCodes(img) {
     var canvas = document.createElement('canvas');
     var scale = Math.min(1, MAX_IMAGE_EDGE / Math.max(img.naturalWidth, img.naturalHeight));
     canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
     canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
     var ctx = canvas.getContext('2d', { willReadFrequently: true });
-    if (!ctx) return [];
+    if (!ctx) return Promise.resolve([]);
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
     var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    var data = imageData.data;
-    var W = canvas.width, H = canvas.height;
-    var MARGIN = Math.max(8, Math.round(Math.min(W, H) * 0.02)); // 外扩边距，覆盖静区
 
-    var found = [];
-    var iter = 0;
-    while (iter++ < MAX_CODE_PER_IMAGE) {
-      var code = jsQR(data, W, H, { inversionAttempts: 'dontInvert' });
-      if (!code || !code.data) break;
-
-      found.push(code.data);
-
-      // 包围盒：四角坐标 → min/max
-      var loc = code.location;
-      var xs = [loc.topLeftCorner.x, loc.topRightCorner.x, loc.bottomLeftCorner.x, loc.bottomRightCorner.x];
-      var ys = [loc.topLeftCorner.y, loc.topRightCorner.y, loc.bottomLeftCorner.y, loc.bottomRightCorner.y];
-      var minX = Math.max(0, Math.floor(Math.min.apply(null, xs)) - MARGIN);
-      var minY = Math.max(0, Math.floor(Math.min.apply(null, ys)) - MARGIN);
-      var maxX = Math.min(W, Math.ceil(Math.max.apply(null, xs)) + MARGIN);
-      var maxY = Math.min(H, Math.ceil(Math.max.apply(null, ys)) + MARGIN);
-
-      paintWhite(data, W, minX, minY, maxX - minX, maxY - minY);
-    }
-    return found;
-  }
-
-  /** 将区域像素涂白（Uint8ClampedArray 原地写，RGB=255, alpha=255） */
-  function paintWhite(data, width, x, y, w, h) {
-    for (var py = y; py < y + h; py++) {
-      var rowOffset = py * width * 4 + x * 4;
-      for (var px = 0; px < w; px++) {
-        var idx = rowOffset + px * 4;
-        data[idx] = 255;     // R
-        data[idx + 1] = 255; // G
-        data[idx + 2] = 255; // B
-        data[idx + 3] = 255; // A
-      }
-    }
+    return ZXingWASM.readBarcodesFromImageData(imageData, {
+      tryHarder: true,
+      tryRotate: true,
+      formats: ['QRCode'],
+      maxNumberOfSymbols: 100
+    }).then(function (codes) {
+      return codes
+        .map(function (c) { return c.text; })
+        .filter(function (t) { return t && t.length > 0; });
+    }).catch(function (e) {
+      console.error('decode failed', e);
+      return [];
+    });
   }
 
   /* ============ 结果列表 ============ */
@@ -594,6 +592,9 @@
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
+
+  // 启动时预加载识别引擎（wasm），避免首次上传时等待
+  initZXing();
 })();
 </script>
 </body>
