@@ -112,12 +112,26 @@ jobs:
           done
           exit $FAIL
 
-      - name: Upload SARIF to code scanning
+      - name: Upload custom SARIF
         if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
-          sarif_file: .
-          category: semgrep
+          sarif_file: custom.sarif
+          category: semgrep-custom
+
+      - name: Upload audit SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: audit.sarif
+          category: semgrep-audit
+
+      - name: Upload rust SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: rust.sarif
+          category: semgrep-rust
 
   # ============ SonarQube 分析（secrets 门控） ============
   sonarqube:
