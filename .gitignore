@@ -7,3 +7,6 @@ src-tauri/gen/
 
 # 图标源
 icons/icon-source.png
+
+# 安装包产物（dist 目录）
+/dist/
