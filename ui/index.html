@@ -53,6 +53,7 @@
 
   /* Upload zone */
   #upload-zone {
+    display: block;
     border: 2px dashed var(--border);
     border-radius: var(--radius-lg);
     background: var(--surface);
@@ -63,9 +64,9 @@
     user-select: none;
   }
   #upload-zone:hover, #upload-zone.dragover { border-color: var(--primary); background: var(--primary-soft); }
-  #upload-zone .icon { font-size: 36px; line-height: 1; }
-  #upload-zone .main-text { margin-top: 12px; font-size: 15px; font-weight: 600; color: var(--text-strong); }
-  #upload-zone .sub-text { margin-top: 4px; font-size: 13px; color: var(--text-muted); }
+  #upload-zone .icon { display: block; font-size: 36px; line-height: 1; }
+  #upload-zone .main-text { display: block; margin-top: 12px; font-size: 15px; font-weight: 600; color: var(--text-strong); }
+  #upload-zone .sub-text { display: block; margin-top: 4px; font-size: 13px; color: var(--text-muted); }
 
   /* Sections */
   section { margin-top: 24px; }
@@ -180,12 +181,12 @@
     <span class="privacy-note">🔒 图片仅在本地识别，不会上传</span>
   </header>
 
-  <div id="upload-zone" role="button" tabindex="0" aria-label="上传图片">
-    <div class="icon">📁</div>
-    <div class="main-text">点击选择或拖拽图片到此处</div>
-    <div class="sub-text">支持一次选择多张 PNG / JPG / WebP / BMP / GIF</div>
+  <label id="upload-zone" aria-label="上传图片">
+    <span class="icon">📁</span>
+    <span class="main-text">点击选择或拖拽图片到此处</span>
+    <span class="sub-text">支持一次选择多张 PNG / JPG / WebP / BMP / GIF</span>
     <input type="file" id="file-input" accept="image/png,image/jpeg,image/webp,image/bmp,image/gif" multiple hidden />
-  </div>
+  </label>
 
   <section id="preview-section" hidden>
     <div class="section-head">
@@ -207,7 +208,7 @@
   </section>
 </div>
 
-<div id="toast" role="status" aria-live="polite"></div>
+<output id="toast" aria-live="polite"></output>
 
 <script src="lib/zxing_reader.js"></script>
 <script>
@@ -268,8 +269,7 @@
 
   function handleFiles(fileList) {
     var accepted = [];
-    for (var i = 0; i < fileList.length; i++) {
-      var f = fileList[i];
+    for (var f of fileList) {
       if (f.type && f.type.indexOf('image/') === 0) accepted.push(f);
     }
     if (accepted.length === 0) {
@@ -364,35 +364,38 @@
         showToast('识别引擎初始化失败，请重新打开应用', 'error');
         return;
       }
+      readImageFile(item);
+    });
+  }
 
-      var fileReader = new FileReader();
-      fileReader.onload = function () {
-        var img = new Image();
-        img.onload = function () {
-          scanImageForQRCodes(img, item).then(function (texts) {
-            item.count = texts.length;
-            item.status = 'done';
-
-            texts.forEach(function (text) {
-              results.push({
-                id: 'r-' + crypto.randomUUID(),
-                imageIndex: item.id,
-                imageName: item.file.name,
-                text: text
-              });
-            });
-
-            updatePreviewCard(item);
-            renderResults();
-          });
-        };
-        img.onerror = function () {
-          item.status = 'done';
-          updatePreviewCard(item);
-        };
-        img.src = fileReader.result;
+  function readImageFile(item) {
+    var fileReader = new FileReader();
+    fileReader.onload = function () {
+      var img = new Image();
+      img.onload = function () { onImageReady(img, item); };
+      img.onerror = function () {
+        item.status = 'done';
+        updatePreviewCard(item);
       };
-      fileReader.readAsDataURL(item.file);
+      img.src = fileReader.result;
+    };
+    fileReader.readAsDataURL(item.file);
+  }
+
+  function onImageReady(img, item) {
+    scanImageForQRCodes(img).then(function (texts) {
+      item.count = texts.length;
+      item.status = 'done';
+      texts.forEach(function (text) {
+        results.push({
+          id: 'r-' + crypto.randomUUID(),
+          imageIndex: item.id,
+          imageName: item.file.name,
+          text: text
+        });
+      });
+      updatePreviewCard(item);
+      renderResults();
     });
   }
 
@@ -516,7 +519,7 @@
     ta.setSelectionRange(0, ta.value.length);
     var ok = false;
     try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
-    document.body.removeChild(ta);
+    ta.remove();
     done(ok);
   }
 
