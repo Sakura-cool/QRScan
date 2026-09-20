@@ -10,3 +10,6 @@ icons/icon-source.png
 
 # 安装包产物（dist 目录）
 /dist/
+
+# 本地打包产物（.package 目录）
+/.package/
