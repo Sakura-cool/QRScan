@@ -44,7 +44,8 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDIwRTMwN0VEN0NENzU3QjkKUldTNVY5ZDg3UWZqSUMybThONEdTYTBmT01GYXpNZk1qekdwNTNrNkRXSWJvWkVydTlPaUF5QVUK",
       "endpoints": [
-        "https://raw.githubusercontent.com/Sakura-cool/QRScan/main/latest.json"
+        "https://cdn.jsdelivr.net/gh/Sakura-cool/QRScan@main/latest.json",
+        "https://github.com/Sakura-cool/QRScan/releases/latest/download/latest.json"
       ]
     }
   }
