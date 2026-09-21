@@ -73,7 +73,6 @@ jobs:
             - Ubuntu x64
           releaseDraft: true
           prerelease: false
-          releaseAssetNamePattern: '[name]-[version]-[platform]-[arch][setup][ext]'
           args: ${{ matrix.args }}
 
       - name: Build only (non-tag push)
