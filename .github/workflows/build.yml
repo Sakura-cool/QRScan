@@ -30,14 +30,14 @@ jobs:
             platform: windows-latest
             args: '--target x86_64-pc-windows-msvc'
           - name: Ubuntu-x64
-            platform: ubuntu-22.04
+            platform: ubuntu-24.04
             args: '--target x86_64-unknown-linux-gnu'
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v7
 
       - name: Install Linux system dependencies
-        if: matrix.platform == 'ubuntu-22.04'
+        if: matrix.platform == 'ubuntu-24.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev libpipewire-0.3-dev libspa-0.2-dev
@@ -47,7 +47,7 @@ jobs:
         run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
 
       - name: Install Rust toolchain
-        if: matrix.platform == 'ubuntu-22.04'
+        if: matrix.platform == 'ubuntu-24.04'
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
@@ -74,7 +74,7 @@ jobs:
 
   # ============ Semgrep 持续扫描（三通道 + SARIF） ============
   semgrep:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
 
@@ -141,7 +141,7 @@ jobs:
 
   # ============ SonarQube 分析（secrets 门控） ============
   sonarqube:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
