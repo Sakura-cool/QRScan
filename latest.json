@@ -1,0 +1,59 @@
+{
+  "version": "0.2.0",
+  "notes": "QRScan 批量二维码识别工具 vv0.2.0\n\n- macOS universal（x86_64 + ARM64）\n- Windows x64\n- Ubuntu x64",
+  "pub_date": "2026-09-21T08:58:39.097Z",
+  "platforms": {
+    "linux-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTNVY5ZDg3UWZqSUoxKzRIZEJpMnA1c1Y0NUYxZFBkaHBBakpqZktjYnFHSVd3ZUcvWC9NSHh6RkV3ZjNZZWlGY1JTNmpDK2NqajFCcVhaWXFMNGFTalRzWlg0Q0t0RlE0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5OTgwNTYwCWZpbGU6UVJTY2FuXzAuMi4wX2FtZDY0LkFwcEltYWdlCXZlcnNpb246MC4yLjAKQ2RyMi9UZXprZmZHMnZvN0dOYUxocXNzVXhjTHBYdkNiVDhBUUlFVFpZRGFUMlpMLytndzI0K2YyUWJHOTlxRFMvMUFDV3MwcEtTazlRQWxJaWE3RFE9PQo=",
+      "url": "https://api.github.com/repos/Sakura-cool/QRScan/releases/assets/578640613"
+    },
+    "linux-x86_64-appimage": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTNVY5ZDg3UWZqSUoxKzRIZEJpMnA1c1Y0NUYxZFBkaHBBakpqZktjYnFHSVd3ZUcvWC9NSHh6RkV3ZjNZZWlGY1JTNmpDK2NqajFCcVhaWXFMNGFTalRzWlg0Q0t0RlE0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5OTgwNTYwCWZpbGU6UVJTY2FuXzAuMi4wX2FtZDY0LkFwcEltYWdlCXZlcnNpb246MC4yLjAKQ2RyMi9UZXprZmZHMnZvN0dOYUxocXNzVXhjTHBYdkNiVDhBUUlFVFpZRGFUMlpMLytndzI0K2YyUWJHOTlxRFMvMUFDV3MwcEtTazlRQWxJaWE3RFE9PQo=",
+      "url": "https://api.github.com/repos/Sakura-cool/QRScan/releases/assets/578640613"
+    },
+    "linux-x86_64-deb": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTNVY5ZDg3UWZqSU5RSDJwdGJmbDNhRGpFaG85U3N6ZXdVZW01VXV3OGtPS1dMTXp0VzFzN0FXakhjWVBuRXBTSk9JQitLbkp3aUFOa2RkM29GbmpJYlR1ME8ycVIzT3dJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5OTgwNTYwCWZpbGU6UVJTY2FuXzAuMi4wX2FtZDY0LmRlYgl2ZXJzaW9uOjAuMi4wCjFINDlBV2s2UUduSU9scWZhdzhpSFFnOTRzZHVVVVMwbkQvR3RwYWZQb1BrSEVFQUJjS0QxQ0I1NkhCbnJCN0Fnc1ZDSXZIeVlCZlVESkNiTkl2OERRPT0K",
+      "url": "https://api.github.com/repos/Sakura-cool/QRScan/releases/assets/578640531"
+    },
+    "linux-x86_64-rpm": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTNVY5ZDg3UWZqSUorUWF4S1hYT3Y5T1JLWmlsUENQbWR3UFVuUENNK2hnQ2hianorRS91a1d4YUpBcWNYdkhVcVJnKytvMXcxSlgrSElETVRVUTFXU1A4MEJnbHQxbkFZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5OTgwNTYwCWZpbGU6UVJTY2FuLTAuMi4wLTEueDg2XzY0LnJwbQl2ZXJzaW9uOjAuMi4wCkRMM2QwQ25SZVpsUWIvdWxVUVNobDRFK3M2aXF6YmVLZ3R6T0dpVmpCeldnaTlJOUhTRHh0V3VhbHFRdDV3WnIwOWRUTmZrZzVNa09qRkQvZlQ1aUNnPT0K",
+      "url": "https://api.github.com/repos/Sakura-cool/QRScan/releases/assets/578640585"
+    },
+    "darwin-aarch64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTNVY5ZDg3UWZqSUVMZjRCWjY5amtUREF3WWliUkk3ZXJtREVXazJWbFM0OFVJL2JkMFJuU1ZIaDZRdVFYVXY1dldDL1NRSmI5aW1kYU9aNXJmR1pQcUJSTm1Hczc2SWdjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5OTgwOTg0CWZpbGU6UVJTY2FuLmFwcC50YXIuZ3oJdmVyc2lvbjowLjIuMApyazNheXJSRzdNZmJmd2Q5U29oczMyeGNsRkg1VTRPbE5WdmFvYTI4QUJmSW9QcmEySHZ6NDRMMVIweGtCaTl2MnNyYTJEd05sRlh5SjZWczVqY0VBZz09Cg==",
+      "url": "https://api.github.com/repos/Sakura-cool/QRScan/releases/assets/578652083"
+    },
+    "darwin-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTNVY5ZDg3UWZqSUVMZjRCWjY5amtUREF3WWliUkk3ZXJtREVXazJWbFM0OFVJL2JkMFJuU1ZIaDZRdVFYVXY1dldDL1NRSmI5aW1kYU9aNXJmR1pQcUJSTm1Hczc2SWdjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5OTgwOTg0CWZpbGU6UVJTY2FuLmFwcC50YXIuZ3oJdmVyc2lvbjowLjIuMApyazNheXJSRzdNZmJmd2Q5U29oczMyeGNsRkg1VTRPbE5WdmFvYTI4QUJmSW9QcmEySHZ6NDRMMVIweGtCaTl2MnNyYTJEd05sRlh5SjZWczVqY0VBZz09Cg==",
+      "url": "https://api.github.com/repos/Sakura-cool/QRScan/releases/assets/578652083"
+    },
+    "darwin-universal": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTNVY5ZDg3UWZqSUVMZjRCWjY5amtUREF3WWliUkk3ZXJtREVXazJWbFM0OFVJL2JkMFJuU1ZIaDZRdVFYVXY1dldDL1NRSmI5aW1kYU9aNXJmR1pQcUJSTm1Hczc2SWdjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5OTgwOTg0CWZpbGU6UVJTY2FuLmFwcC50YXIuZ3oJdmVyc2lvbjowLjIuMApyazNheXJSRzdNZmJmd2Q5U29oczMyeGNsRkg1VTRPbE5WdmFvYTI4QUJmSW9QcmEySHZ6NDRMMVIweGtCaTl2MnNyYTJEd05sRlh5SjZWczVqY0VBZz09Cg==",
+      "url": "https://api.github.com/repos/Sakura-cool/QRScan/releases/assets/578652083"
+    },
+    "darwin-aarch64-app": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTNVY5ZDg3UWZqSUVMZjRCWjY5amtUREF3WWliUkk3ZXJtREVXazJWbFM0OFVJL2JkMFJuU1ZIaDZRdVFYVXY1dldDL1NRSmI5aW1kYU9aNXJmR1pQcUJSTm1Hczc2SWdjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5OTgwOTg0CWZpbGU6UVJTY2FuLmFwcC50YXIuZ3oJdmVyc2lvbjowLjIuMApyazNheXJSRzdNZmJmd2Q5U29oczMyeGNsRkg1VTRPbE5WdmFvYTI4QUJmSW9QcmEySHZ6NDRMMVIweGtCaTl2MnNyYTJEd05sRlh5SjZWczVqY0VBZz09Cg==",
+      "url": "https://api.github.com/repos/Sakura-cool/QRScan/releases/assets/578652083"
+    },
+    "darwin-x86_64-app": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTNVY5ZDg3UWZqSUVMZjRCWjY5amtUREF3WWliUkk3ZXJtREVXazJWbFM0OFVJL2JkMFJuU1ZIaDZRdVFYVXY1dldDL1NRSmI5aW1kYU9aNXJmR1pQcUJSTm1Hczc2SWdjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5OTgwOTg0CWZpbGU6UVJTY2FuLmFwcC50YXIuZ3oJdmVyc2lvbjowLjIuMApyazNheXJSRzdNZmJmd2Q5U29oczMyeGNsRkg1VTRPbE5WdmFvYTI4QUJmSW9QcmEySHZ6NDRMMVIweGtCaTl2MnNyYTJEd05sRlh5SjZWczVqY0VBZz09Cg==",
+      "url": "https://api.github.com/repos/Sakura-cool/QRScan/releases/assets/578652083"
+    },
+    "darwin-universal-app": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTNVY5ZDg3UWZqSUVMZjRCWjY5amtUREF3WWliUkk3ZXJtREVXazJWbFM0OFVJL2JkMFJuU1ZIaDZRdVFYVXY1dldDL1NRSmI5aW1kYU9aNXJmR1pQcUJSTm1Hczc2SWdjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5OTgwOTg0CWZpbGU6UVJTY2FuLmFwcC50YXIuZ3oJdmVyc2lvbjowLjIuMApyazNheXJSRzdNZmJmd2Q5U29oczMyeGNsRkg1VTRPbE5WdmFvYTI4QUJmSW9QcmEySHZ6NDRMMVIweGtCaTl2MnNyYTJEd05sRlh5SjZWczVqY0VBZz09Cg==",
+      "url": "https://api.github.com/repos/Sakura-cool/QRScan/releases/assets/578652083"
+    },
+    "windows-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTNVY5ZDg3UWZqSVBMVEtpSTlwbUxhbWROZVgzTTg2NXBmM3pUZTRWWmJ0WWJtYlA2TzY2Ny9XSzRjUVlJenVWUkhxUGRMY3ZqZWRGL1FtcDdyZEVFTDZDUlJmZEtDNndVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5OTgxMTE2CWZpbGU6UVJTY2FuXzAuMi4wX3g2NF9lbi1VUy5tc2kJdmVyc2lvbjowLjIuMApzRDJxSGdFUG9VNlZrT092U0FMRXY4REZMSy8zWU4zTFpLRUp3eS8xZ25vcDV3ZEFIckxteGZldzZWaHFKNnQ0c1BZcGhoMmM3ZmZLckZIUVppbU5CUT09Cg==",
+      "url": "https://api.github.com/repos/Sakura-cool/QRScan/releases/assets/578655659"
+    },
+    "windows-x86_64-msi": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTNVY5ZDg3UWZqSVBMVEtpSTlwbUxhbWROZVgzTTg2NXBmM3pUZTRWWmJ0WWJtYlA2TzY2Ny9XSzRjUVlJenVWUkhxUGRMY3ZqZWRGL1FtcDdyZEVFTDZDUlJmZEtDNndVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5OTgxMTE2CWZpbGU6UVJTY2FuXzAuMi4wX3g2NF9lbi1VUy5tc2kJdmVyc2lvbjowLjIuMApzRDJxSGdFUG9VNlZrT092U0FMRXY4REZMSy8zWU4zTFpLRUp3eS8xZ25vcDV3ZEFIckxteGZldzZWaHFKNnQ0c1BZcGhoMmM3ZmZLckZIUVppbU5CUT09Cg==",
+      "url": "https://api.github.com/repos/Sakura-cool/QRScan/releases/assets/578655659"
+    },
+    "windows-x86_64-nsis": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTNVY5ZDg3UWZqSUZvbS9pQTdaZnhvSW92TXpJRXFpTldIQ3B5NlRGcHNBNjBTbk5wbm1rUHhDaXZRWS9iWjNCbHV0VThsM2FzQkQ3QTNEL3d1alBERC95QldGSHhsSnd3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg5OTgxMTE2CWZpbGU6UVJTY2FuXzAuMi4wX3g2NC1zZXR1cC5leGUJdmVyc2lvbjowLjIuMAp4UmR1MUFMVkJWQVRqbTQ1RzBRdjI2RHYrZG56S01seWptMDFtUmFPbWppV0dPK25FL1g1QmZ0Z3FYWFdQRVBWeFdoWTU0emduTFdqR3NNSm90OGNEUT09Cg==",
+      "url": "https://api.github.com/repos/Sakura-cool/QRScan/releases/assets/578655687"
+    }
+  }
+}
