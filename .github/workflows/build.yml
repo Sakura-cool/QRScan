@@ -70,6 +70,7 @@ jobs:
             - Ubuntu x64
           releaseDraft: true
           prerelease: false
+          releaseAssetNamePattern: '[name]-[version]-[platform]-[arch][setup][ext]'
           args: ${{ matrix.args }}
 
   # ============ Semgrep 持续扫描（三通道 + SARIF） ============
