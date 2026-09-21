@@ -18,19 +18,17 @@ concurrency:
 
 jobs:
   # ============ 三端三架构构建发布（Node 24） ============
-  # 当前本地 Gitea 只有 Ubuntu runner（colima），macOS/Windows 平台暂不启用。
-  # 接入对应系统的 runner 后，取消下面 macOS/Windows 两项的注释即可恢复三端构建。
   build:
     strategy:
       fail-fast: false
       matrix:
         include:
-          # - name: macOS-universal
-          #   platform: macos-latest
-          #   args: '--target universal-apple-darwin'
-          # - name: Windows-x64
-          #   platform: windows-latest
-          #   args: '--target x86_64-pc-windows-msvc'
+          - name: macOS-universal
+            platform: macos-latest
+            args: '--target universal-apple-darwin'
+          - name: Windows-x64
+            platform: windows-latest
+            args: '--target x86_64-pc-windows-msvc'
           - name: Ubuntu-x64
             platform: ubuntu-22.04
             args: '--target x86_64-unknown-linux-gnu'
