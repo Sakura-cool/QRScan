@@ -48,6 +48,12 @@ jobs:
         if: matrix.platform == 'macos-latest'
         run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
 
+      - name: Install Rust toolchain
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+
       - name: Install Tauri CLI
         run: cargo install tauri-cli --version "^2.0.0" --locked
 
