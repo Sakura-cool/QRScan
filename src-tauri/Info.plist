@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSScreenCaptureUsageDescription</key>
+	<string>QRScan 需要屏幕录制权限，以便截取您选择的屏幕区域进行二维码识别。截取的图像仅在本地处理，不会上传。</string>
+</dict>
+</plist>

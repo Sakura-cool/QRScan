@@ -201,6 +201,7 @@
       <span class="badge">批量二维码识别</span>
     </div>
     <div class="header-actions">
+      <button class="btn primary" id="capture-btn">📷 截屏识别</button>
       <span class="privacy-note">🔒 图片仅在本地识别，不会上传</span>
     </div>
   </header>
@@ -609,6 +610,49 @@
 
   function tauriInvoke(cmd, args) {
     return __TAURI__.core.invoke(cmd, args || {});
+  }
+
+  /* --- 截图输入 --- */
+  $('capture-btn').addEventListener('click', function () {
+    if (!isTauri) { showToast('截图功能需在桌面 App 中使用', 'error'); return; }
+    var btn = $('capture-btn');
+    btn.disabled = true;
+    btn.textContent = '截屏中…';
+    tauriInvoke('capture_show')
+      .catch(function (e) {
+        console.error('capture show failed', e);
+        showToast('截图失败：' + (e && e.message ? e.message : e), 'error');
+      })
+      .finally(function () {
+        btn.disabled = false;
+        btn.textContent = '📷 截屏识别';
+      });
+  });
+
+  // 监听选区结果：capture 窗口确认后回调
+  if (isTauri) {
+    __TAURI__.event.listen('capture:done', function (evt) {
+      decodeScreenshot(evt.payload);
+    });
+  }
+
+  function decodeScreenshot(dataUrl) {
+    var img = new Image();
+    img.onload = function () {
+      var canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      canvas.toBlob(function (blob) {
+        if (!blob) { showToast('截图处理失败', 'error'); return; }
+        var file = new File([blob], 'screenshot-' + Date.now() + '.png', { type: 'image/png' });
+        addImage(file);
+        showToast('截图识别完成', 'success');
+      }, 'image/png');
+    };
+    img.onerror = function () { showToast('截图解码失败', 'error'); };
+    img.src = dataUrl;
   }
 
   /* --- 自动更新（启动检查一次 + 静默下载 + 覆盖更新时交互） --- */

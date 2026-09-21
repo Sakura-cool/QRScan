@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>截屏选区</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #000; cursor: crosshair; }
+  canvas#shot { position: fixed; inset: 0; display: block; }
+  #sel {
+    position: fixed; z-index: 3; display: none;
+    border: 2px solid #2563EB; background: rgba(37,99,235,0.15);
+  }
+  #size-tag {
+    position: fixed; z-index: 4; display: none; pointer-events: none;
+    background: #2563EB; color: #fff; font: 12px -apple-system, "Segoe UI", "PingFang SC", sans-serif;
+    padding: 2px 8px; border-radius: 4px; white-space: nowrap;
+  }
+  #toolbar {
+    position: fixed; z-index: 5; display: none; gap: 6px;
+    background: rgba(15,23,42,0.92); padding: 6px; border-radius: 8px;
+  }
+  #toolbar button {
+    font: 13px -apple-system, "Segoe UI", "PingFang SC", sans-serif;
+    border: none; border-radius: 6px; padding: 6px 14px; cursor: pointer;
+    color: #fff; background: rgba(255,255,255,0.16);
+  }
+  #toolbar button.ok { background: #2563EB; }
+  #toolbar button:hover { opacity: 0.88; }
+  #tip {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+    background: rgba(15,23,42,0.85); color: #fff; font: 13px -apple-system, "Segoe UI", "PingFang SC", sans-serif;
+    padding: 8px 16px; border-radius: 8px; z-index: 6; white-space: nowrap; text-align: center;
+  }
+</style>
+</head>
+<body>
+<canvas id="shot"></canvas>
+<div id="sel"></div>
+<div id="size-tag"></div>
+<div id="toolbar">
+  <button id="cancel-btn">✕</button>
+  <button id="ok-btn" class="ok">✓ 确定识别</button>
+</div>
+<div id="tip">拖拽框选屏幕区域 · Esc 取消 · Enter 确认</div>
+
+<script>
+(function () {
+  'use strict';
+  var __TAURI__ = window.__TAURI__;
+  var shot = document.getElementById('shot');
+  var ctx = shot.getContext('2d');
+  var selEl = document.getElementById('sel');
+  var sizeTag = document.getElementById('size-tag');
+  var toolbar = document.getElementById('toolbar');
+  var tip = document.getElementById('tip');
+
+  var img = null;
+  var imgW = 0, imgH = 0;
+  var scale = 1;
+  var offsetX = 0, offsetY = 0;
+  var drawing = false;
+  var startX = 0, startY = 0;
+  var curX = 0, curY = 0;
+  var sel = null;
+
+  function setTitle(s) { try { document.title = s; } catch (e) {} }
+
+  // 收到 start 事件才开始截屏（capture 窗口随 App 预加载，避免启动即截图）
+  __TAURI__.event.listen('capture:start', function () {
+    setTitle('截屏选区:开始');
+    tip.style.display = 'block';
+    toolbar.style.display = 'none';
+    selEl.style.display = 'none';
+    sizeTag.style.display = 'none';
+    sel = null;
+    __TAURI__.core.invoke('capture_all')
+      .then(function (bytes) {
+        var arr = new Uint8Array(bytes);
+        var blob = new Blob([arr], { type: 'image/png' });
+        var url = URL.createObjectURL(blob);
+        var im = new Image();
+        im.onload = function () {
+          img = im;
+          imgW = im.naturalWidth;
+          imgH = im.naturalHeight;
+          fitWindow();
+          setTitle('截屏选区:就绪 ' + imgW + 'x' + imgH);
+          tip.textContent = '拖拽框选屏幕区域 · Esc 取消 · Enter 确认';
+          tip.style.display = 'block';
+        };
+        im.onerror = function () { setTitle('截屏选区:图片解码失败'); };
+        im.src = url;
+      })
+      .catch(function (e) {
+        console.error('capture_all failed', e);
+        setTitle('截屏选区:截图失败');
+        tip.textContent = '截图失败：' + (e && e.message ? e.message : e) + '。\n需要「屏幕录制」权限：系统设置 → 隐私与安全性 → 屏幕录制 → 允许 QRScan，授权后重试';
+        tip.style.display = 'block';
+      });
+  });
+
+  // 截图铺满整个窗口（cover），保证占满窗口可框选
+  function fitWindow() {
+    var w = window.innerWidth;
+    var h = window.innerHeight;
+    shot.width = w;
+    shot.height = h;
+    scale = Math.max(w / imgW, h / imgH);
+    var dw = imgW * scale;
+    var dh = imgH * scale;
+    offsetX = (w - dw) / 2;
+    offsetY = (h - dh) / 2;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(img, offsetX, offsetY, dw, dh);
+  }
+
+  function toImage(e) {
+    return {
+      x: (e.clientX - offsetX) / scale,
+      y: (e.clientY - offsetY) / scale
+    };
+  }
+
+  window.addEventListener('pointerdown', function (e) {
+    if (!img) return;
+    if (e.target.closest && e.target.closest('#toolbar')) return;
+    var p = toImage(e);
+    startX = p.x; startY = p.y;
+    curX = p.x; curY = p.y;
+    drawing = true;
+    tip.style.display = 'none';
+    toolbar.style.display = 'none';
+    renderSel();
+    if (e.preventDefault) e.preventDefault();
+  });
+
+  window.addEventListener('pointermove', function (e) {
+    if (!drawing) return;
+    var p = toImage(e);
+    curX = p.x; curY = p.y;
+    renderSel();
+  });
+
+  window.addEventListener('pointerup', function (e) {
+    if (!drawing) return;
+    drawing = false;
+    if (sel && sel.w > 4 && sel.h > 4) showToolbar();
+  });
+
+  function renderSel() {
+    var x = Math.min(startX, curX);
+    var y = Math.min(startY, curY);
+    var w = Math.abs(curX - startX);
+    var h = Math.abs(curY - startY);
+    sel = { x: x, y: y, w: w, h: h };
+    selEl.style.display = 'block';
+    selEl.style.left = (offsetX + x * scale) + 'px';
+    selEl.style.top = (offsetY + y * scale) + 'px';
+    selEl.style.width = (w * scale) + 'px';
+    selEl.style.height = (h * scale) + 'px';
+    if (w > 2 && h > 2) {
+      sizeTag.style.display = 'block';
+      sizeTag.style.left = (offsetX + x * scale) + 'px';
+      sizeTag.style.top = (offsetY + y * scale - 24) + 'px';
+      sizeTag.textContent = Math.round(w) + ' × ' + Math.round(h);
+    } else {
+      sizeTag.style.display = 'none';
+    }
+  }
+
+  function showToolbar() {
+    var sx = offsetX + sel.x * scale;
+    var sy = offsetY + sel.y * scale;
+    var sw = sel.w * scale;
+    var sh = sel.h * scale;
+    var tx = sx + sw - 90;
+    var ty = sy + sh + 8;
+    toolbar.style.left = tx + 'px';
+    toolbar.style.top = ty + 'px';
+    toolbar.style.display = 'flex';
+  }
+
+  function confirmSelection() {
+    if (!img || !sel || sel.w <= 4 || sel.h <= 4) return;
+    setTitle('截屏选区:确认 ' + Math.round(sel.w) + 'x' + Math.round(sel.h));
+    var c = document.createElement('canvas');
+    c.width = Math.round(sel.w);
+    c.height = Math.round(sel.h);
+    var cctx = c.getContext('2d');
+    cctx.drawImage(img, sel.x, sel.y, sel.w, sel.h, 0, 0, c.width, c.height);
+    var dataUrl = c.toDataURL('image/png');
+    __TAURI__.event.emitTo('main', 'capture:done', dataUrl)
+      .then(function () { return __TAURI__.core.invoke('capture_hide'); })
+      .catch(function (e) { console.error(e); });
+  }
+
+  function cancelSelection() {
+    setTitle('截屏选区:取消');
+    __TAURI__.core.invoke('capture_hide').catch(function (e) { console.error(e); });
+  }
+
+  document.getElementById('ok-btn').addEventListener('click', confirmSelection);
+  document.getElementById('cancel-btn').addEventListener('click', cancelSelection);
+
+  window.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') cancelSelection();
+    if (e.key === 'Enter') confirmSelection();
+  });
+})();
+</script>
+</body>
+</html>
