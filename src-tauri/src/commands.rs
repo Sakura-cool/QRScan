@@ -1,41 +1,7 @@
-use serde::Serialize;
-use tauri::{AppHandle, Emitter, Manager};
 use xcap::Monitor;
 
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct MonitorInfo {
-    pub id: u32,
-    pub name: String,
-    pub x: i32,
-    pub y: i32,
-    pub width: u32,
-    pub height: u32,
-    pub scale_factor: f32,
-    pub is_primary: bool,
-}
-
-#[tauri::command]
-pub fn capture_monitors() -> Result<Vec<MonitorInfo>, String> {
-    let monitors = Monitor::all().map_err(|e| e.to_string())?;
-    let mut out = Vec::with_capacity(monitors.len());
-    for m in monitors {
-        out.push(MonitorInfo {
-            id: m.id().unwrap_or(0),
-            name: m.friendly_name().unwrap_or_else(|_| m.name().unwrap_or_default()),
-            x: m.x().unwrap_or(0),
-            y: m.y().unwrap_or(0),
-            width: m.width().unwrap_or(0),
-            height: m.height().unwrap_or(0),
-            scale_factor: m.scale_factor().unwrap_or(1.0),
-            is_primary: m.is_primary().unwrap_or(false),
-        });
-    }
-    Ok(out)
-}
-
 /// 截取全部显示器画面，按逻辑坐标合成一张位图，编码 PNG 返回。
-/// 前端在该图上渲染遮罩、拖拽框选并裁剪，识别仍在 WebView 本地完成。
+/// 前端直接将该截图作为输入，识别全部二维码（图片不出本地）。
 #[tauri::command]
 pub fn capture_all() -> Result<Vec<u8>, String> {
     let monitors = Monitor::all().map_err(|e| e.to_string())?;
@@ -84,44 +50,4 @@ pub fn capture_all() -> Result<Vec<u8>, String> {
         .write_with_encoder(encoder)
         .map_err(|e| e.to_string())?;
     Ok(png)
-}
-
-/// 显示选区遮罩窗口并铺满主显示器（set_size+set_position，不切换 Space）。
-/// 显示后定向通知 capture 窗口开始截屏。
-#[tauri::command]
-pub fn capture_show(app: AppHandle) -> Result<(), String> {
-    let win = app
-        .get_webview_window("capture")
-        .ok_or("选区窗口不存在")?;
-
-    let monitors = Monitor::all().map_err(|e| e.to_string())?;
-    let primary = monitors
-        .iter()
-        .find(|m| m.is_primary().unwrap_or(false))
-        .or_else(|| monitors.first())
-        .ok_or("未检测到显示器")?;
-    let px = primary.x().unwrap_or(0);
-    let py = primary.y().unwrap_or(0);
-    let pw = primary.width().unwrap_or(0);
-    let ph = primary.height().unwrap_or(0);
-
-    win.set_size(tauri::LogicalSize::new(pw as f64, ph as f64))
-        .map_err(|e| e.to_string())?;
-    win.set_position(tauri::LogicalPosition::new(px as f64, py as f64))
-        .map_err(|e| e.to_string())?;
-    win.show().map_err(|e| e.to_string())?;
-    win.set_focus().map_err(|e| e.to_string())?;
-
-    app.emit_to("capture", "capture:start", ())
-        .map_err(|e| e.to_string())?;
-    Ok(())
-}
-
-#[tauri::command]
-pub fn capture_hide(app: AppHandle) -> Result<(), String> {
-    let win = app
-        .get_webview_window("capture")
-        .ok_or("选区窗口不存在")?;
-    win.hide().map_err(|e| e.to_string())?;
-    Ok(())
 }

@@ -612,15 +612,23 @@
     return __TAURI__.core.invoke(cmd, args || {});
   }
 
-  /* --- 截图输入 --- */
+  /* --- 截图输入（全屏截图直接识别） --- */
   $('capture-btn').addEventListener('click', function () {
     if (!isTauri) { showToast('截图功能需在桌面 App 中使用', 'error'); return; }
     var btn = $('capture-btn');
     btn.disabled = true;
-    btn.textContent = '截屏中…';
-    tauriInvoke('capture_show')
+    btn.textContent = '截屏识别中…';
+    tauriInvoke('capture_all')
+      .then(function (pngBytes) {
+        var arr = new Uint8Array(pngBytes);
+        var blob = new Blob([arr], { type: 'image/png' });
+        return URL.createObjectURL(blob);
+      })
+      .then(function (url) {
+        decodeScreenshot(url);
+      })
       .catch(function (e) {
-        console.error('capture show failed', e);
+        console.error('capture_all failed', e);
         showToast('截图失败：' + (e && e.message ? e.message : e), 'error');
       })
       .finally(function () {
@@ -629,14 +637,7 @@
       });
   });
 
-  // 监听选区结果：capture 窗口确认后回调
-  if (isTauri) {
-    __TAURI__.event.listen('capture:done', function (evt) {
-      decodeScreenshot(evt.payload);
-    });
-  }
-
-  function decodeScreenshot(dataUrl) {
+  function decodeScreenshot(url) {
     var img = new Image();
     img.onload = function () {
       var canvas = document.createElement('canvas');
@@ -648,11 +649,11 @@
         if (!blob) { showToast('截图处理失败', 'error'); return; }
         var file = new File([blob], 'screenshot-' + Date.now() + '.png', { type: 'image/png' });
         addImage(file);
-        showToast('截图识别完成', 'success');
+        showToast('截屏识别完成', 'success');
       }, 'image/png');
     };
     img.onerror = function () { showToast('截图解码失败', 'error'); };
-    img.src = dataUrl;
+    img.src = url;
   }
 
   /* --- 自动更新（启动检查一次 + 静默下载 + 覆盖更新时交互） --- */
