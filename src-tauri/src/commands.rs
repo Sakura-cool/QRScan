@@ -37,11 +37,12 @@ pub fn capture_all() -> Result<Vec<u8>, String> {
         image::imageops::overlay(&mut canvas, &shot, x as i64, y as i64);
     }
 
-    let all_black = canvas
-        .pixels()
-        .all(|p| p[0] == 0 && p[1] == 0 && p[2] == 0);
+    let all_black = canvas.pixels().all(|p| p[0] == 0 && p[1] == 0 && p[2] == 0);
     if all_black {
-        return Err("屏幕录制权限未授权：请在 系统设置 → 隐私与安全性 → 屏幕录制 中允许 QRScan 后重试".into());
+        return Err(
+            "屏幕录制权限未授权：请在 系统设置 → 隐私与安全性 → 屏幕录制 中允许 QRScan 后重试"
+                .into(),
+        );
     }
 
     let mut png = Vec::new();
