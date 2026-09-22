@@ -1,6 +1,6 @@
 [package]
 name = "qrscan"
-version = "0.2.0"
+version = "0.2.1"
 description = "QRScan - 批量二维码识别工具"
 edition = "2021"
 

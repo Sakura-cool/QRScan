@@ -200,7 +200,7 @@
       <span class="badge">批量二维码识别</span>
     </div>
     <div class="header-actions">
-      <button class="btn primary" id="capture-btn">📷 截屏识别</button>
+      <button class="btn primary" id="capture-btn">📷 屏幕识别</button>
       <span class="privacy-note">🔒 图片仅在本地识别，不会上传</span>
     </div>
   </header>
@@ -616,7 +616,7 @@
     if (!isTauri) { showToast('截图功能需在桌面 App 中使用', 'error'); return; }
     var btn = $('capture-btn');
     btn.disabled = true;
-    btn.textContent = '截屏识别中…';
+    btn.textContent = '屏幕识别中…';
     tauriInvoke('capture_all')
       .then(function (pngBytes) {
         var arr = new Uint8Array(pngBytes);
@@ -632,7 +632,7 @@
       })
       .finally(function () {
         btn.disabled = false;
-        btn.textContent = '📷 截屏识别';
+        btn.textContent = '📷 屏幕识别';
       });
   });
 
@@ -648,7 +648,7 @@
         if (!blob) { showToast('截图处理失败', 'error'); return; }
         var file = new File([blob], 'screenshot-' + Date.now() + '.png', { type: 'image/png' });
         addImage(file);
-        showToast('截屏识别完成', 'success');
+        showToast('屏幕识别完成', 'success');
       }, 'image/png');
     };
     img.onerror = function () { showToast('截图解码失败', 'error'); };
