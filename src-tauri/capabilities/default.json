@@ -1,7 +1,13 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "QRScan 默认权限：核心能力（窗口/事件）。剪贴板使用 WebView 原生 navigator.clipboard（tauri:// 为安全上下文）。",
+  "description": "QRScan 默认权限：核心能力 + 窗口控制（标题栏最小化/最大化/关闭）。剪贴板使用 WebView 原生 navigator.clipboard（tauri:// 为安全上下文）。",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": [
+    "core:default",
+    "core:window:allow-minimize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-close",
+    "core:window:allow-start-dragging"
+  ]
 }

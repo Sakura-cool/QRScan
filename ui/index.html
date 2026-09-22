@@ -190,9 +190,47 @@
     white-space: pre-wrap; word-break: break-all;
   }
   .modal-actions, .update-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+  /* ============ 自定义标题栏 ============ */
+  #titlebar {
+    -webkit-user-select: none; user-select: none;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 38px; padding: 0 8px 0 12px;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 80;
+  }
+  #titlebar.is-mac { padding-left: 78px; } /* 给 macOS 红绿灯留位 */
+  #title-text {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; color: var(--text-normal); cursor: pointer;
+    border-radius: 4px; padding: 3px 8px;
+    transition: background 0.15s ease; white-space: nowrap;
+  }
+  #title-text:hover { background: var(--primary-soft); }
+  #title-text .ver { color: var(--text-muted); font-weight: 400; }
+  #title-text .update-dot { color: var(--primary); font-size: 12px; }
+  .win-controls { display: flex; align-items: center; gap: 2px; }
+  .win-controls button {
+    width: 40px; height: 30px; border: none; background: transparent; cursor: pointer;
+    font-size: 13px; color: var(--text-normal); border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .win-controls button:hover { background: var(--bg); }
+  .win-controls button.close:hover { background: var(--danger); color: #fff; }
 </style>
 </head>
 <body>
+<div id="titlebar" data-tauri-drag-region>
+  <span id="title-text" data-tauri-drag-region="false" title="点击检查更新">
+    QRScan · <span class="ver" id="version-text">批量二维码识别 v0.2.0</span>
+    <span class="update-dot" id="update-dot" hidden>🔄</span>
+  </span>
+  <div class="win-controls" id="win-controls">
+    <button id="win-min" title="最小化" aria-label="最小化">─</button>
+    <button id="win-max" title="最大化/还原" aria-label="最大化">▢</button>
+    <button id="win-close" class="close" title="关闭" aria-label="关闭">✕</button>
+  </div>
+</div>
 <div class="app">
   <header>
     <div class="brand">
@@ -655,25 +693,83 @@
     img.src = url;
   }
 
-  /* --- 自动更新（启动检查一次 + 静默下载 + 覆盖更新时交互） --- */
-  function checkForUpdate() {
+  /* --- 自动更新（启动静默 + 点击标题手动检查） --- */
+  var latestVersion = null;
+
+  function checkForUpdate(manual) {
     if (!__TAURI__.updater) return;
+    if (manual) setTitleChecking(true);
     __TAURI__.updater.check()
       .then(function (update) {
-        if (!update) return; // 已是最新，静默
-        // 静默下载
-        update.downloadAndInstall()
-          .then(function () {
-            showUpdateDialog(update);
-          })
-          .catch(function (e) {
-            console.error('update download failed', e);
-            showToast('更新下载失败：' + (e && e.message ? e.message : e), 'error');
-          });
+        if (!update) {
+          if (manual) {
+            setTitleChecking(false);
+            showToast('当前已是最新版本', 'success');
+          }
+          return;
+        }
+        latestVersion = update.version;
+        showUpdateDot();
+        if (manual) {
+          // 手动检查到新版 → 直接弹窗（用户可按需下载安装）
+          setTitleChecking(false);
+          showManualUpdateDialog(update);
+        } else {
+          // 启动静默：有新版自动下载，下载完成弹交互
+          update.downloadAndInstall()
+            .then(function () { showUpdateDialog(update); })
+            .catch(function (e) {
+              console.error('update download failed', e);
+              showToast('更新下载失败：' + (e && e.message ? e.message : e), 'error');
+            });
+        }
       })
       .catch(function (e) {
         console.error('check update failed', e);
+        setTitleChecking(false);
+        if (manual) showToast('检查更新失败：' + (e && e.message ? e.message : e), 'error');
       });
+  }
+
+  // 手动检查弹窗：发现新版本 → 提供「立即更新」与「稍后」
+  function showManualUpdateDialog(update) {
+    var existing = $('update-modal');
+    if (existing) existing.remove();
+
+    var modal = document.createElement('div');
+    modal.id = 'update-modal';
+    modal.className = 'modal-overlay';
+    modal.innerHTML =
+      '<div class="modal" role="dialog" aria-modal="true" aria-labelledby="update-title">' +
+      '  <h2 id="update-title">🔄 发现新版本 v' + escapeHtml(update.version) + '</h2>' +
+      '  <div class="update-info">' +
+      '    <p>当前版本：<strong>' + escapeHtml(update.currentVersion) + '</strong></p>' +
+      '    <p>新版本：<strong>' + escapeHtml(update.version) + '</strong></p>' +
+      '  </div>' +
+      '  <div class="update-notes" id="update-notes">' + escapeHtml(update.body || '暂无更新说明') + '</div>' +
+      '  <div class="update-actions">' +
+      '    <button class="btn default" id="update-later-btn">稍后再说</button>' +
+      '    <button class="btn primary" id="update-now-btn">⬇ 立即更新</button>' +
+      '  </div>' +
+      '</div>';
+    document.body.appendChild(modal);
+
+    $('update-later-btn').addEventListener('click', function () { modal.remove(); });
+    $('update-now-btn').addEventListener('click', function () {
+      var btn = $('update-now-btn');
+      btn.disabled = true;
+      btn.textContent = '更新中…';
+      update.downloadAndInstall()
+        .then(function () {
+          showToast('更新完成，即将重启', 'success');
+          setTimeout(function () { __TAURI__.process.relaunch(); }, 1500);
+        })
+        .catch(function (e) {
+          btn.disabled = false;
+          btn.textContent = '⬇ 立即更新';
+          showToast('更新失败：' + (e && e.message ? e.message : e), 'error');
+        });
+    });
   }
 
   function showUpdateDialog(update) {
@@ -698,15 +794,12 @@
       '</div>';
     document.body.appendChild(modal);
 
-    // 立即更新：安装并重启
     $('update-now-btn').addEventListener('click', function () {
       var btn = $('update-now-btn');
       btn.disabled = true;
       btn.textContent = '安装中…';
       installPendingUpdate(true);
     });
-
-    // 退出时自动更新：关闭弹窗，App 退出时安装（Tauri updater 安装包已就绪）
     $('update-exit-btn').addEventListener('click', function () {
       modal.remove();
       showToast('将在退出时自动完成更新', 'success');
@@ -730,9 +823,57 @@
       });
   }
 
+  // 标题栏：版本号 / 点击检查更新 / 更新图标 / 窗口控制
+  function initTitleBar() {
+    var titleText = $('title-text');
+    var versionText = $('version-text');
+    var updateDot = $('update-dot');
+
+    // 显示当前版本号
+    if (__TAURI__.app) {
+      __TAURI__.app.getVersion().then(function (v) {
+        versionText.textContent = '批量二维码识别 v' + v;
+      }).catch(function () { /* 忽略 */ });
+    }
+
+    // 点击标题 → 手动检查更新
+    titleText.addEventListener('click', function (e) {
+      if (e.target.closest && e.target.closest('.win-controls')) return;
+      if (__TAURI__.updater) {
+        titleText.style.pointerEvents = 'none';
+        setTimeout(function () { titleText.style.pointerEvents = ''; }, 2000);
+        checkForUpdate(true);
+      }
+    });
+
+    // mac 平台：保留原生红绿灯，隐藏自绘窗口控制按钮
+    var isMac = /Mac|iPhone|iPad/.test(navigator.platform || '');
+    if (isMac) {
+      $('win-controls').style.display = 'none';
+      document.getElementById('titlebar').classList.add('is-mac');
+    }
+
+    // 窗口控制
+    var winControl = __TAURI__.window.getCurrentWindow();
+    $('win-min').addEventListener('click', function () { winControl.minimize(); });
+    $('win-max').addEventListener('click', function () { winControl.toggleMaximize(); });
+    $('win-close').addEventListener('click', function () { winControl.close(); });
+  }
+
+  function setTitleChecking(on) {
+    var t = $('title-text');
+    if (on) { t.style.opacity = '0.6'; } else { t.style.opacity = ''; }
+  }
+
+  function showUpdateDot() {
+    var dot = $('update-dot');
+    if (dot) dot.hidden = false;
+  }
+
   // 启动后静默检查一次（有新版本自动下载，下载完成弹窗交互）
   if (isTauri) {
-    setTimeout(function () { checkForUpdate(); }, 3000);
+    initTitleBar();
+    setTimeout(function () { checkForUpdate(false); }, 3000);
   }
 
 
