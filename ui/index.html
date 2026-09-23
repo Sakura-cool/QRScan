@@ -825,10 +825,9 @@
           ptext.textContent = '下载完成，正在安装…';
         }
       }).then(function () {
-        showToast('更新完成，即将重启', 'success');
-        setTimeout(function () {
-          if (__TAURI__.process) __TAURI__.process.relaunch();
-        }, 1500);
+        // 下载安装完成：关闭弹窗，提示用户重启后使用新版
+        modal.remove();
+        showToast('更新已就绪，重启后使用新版', 'success');
       }).catch(function (e) {
         btn.disabled = false;
         btn.textContent = primaryLabel;
