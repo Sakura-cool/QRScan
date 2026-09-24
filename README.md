@@ -53,7 +53,7 @@ cp -r src-tauri/target/{arch}/release/bundle/*/* .
 
 ### 三端 CI
 
-`.github/workflows/build.yml`：push `main` 或 `v*` tag 自动执行完整流水线：
+`.github/workflows/build.yml`：push `v*` tag 自动执行完整流水线（`main` 分支推送不触发，仅 tag 触发）：
 
 1. **build**：macOS universal / Windows x64 / Ubuntu x64 三端构建安装包并发布 GitHub Release（Node 24 运行时）
 2. **semgrep**：三通道扫描（自定义规则集 `.github/semgrep/qrscan-rules.yml` + `security-audit` + `rust`），命中即失败，SARIF 上传 GitHub Code Scanning
