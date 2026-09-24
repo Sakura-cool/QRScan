@@ -75,13 +75,14 @@ origin   git@github.com:Sakura-cool/QRScan.git           # 对外 + CI
 
 ## 更新签名密钥
 
+> 本仓库为**开源**（MIT，无保密要求），签名密钥已随仓库公开，**仅本地签名打包时需要**；CI 构建无需手动处理密钥。
+
 | 项 | 说明 |
 |----|------|
-| 存放位置 | 内网 Gitea 私有仓库 `admin/qrscan-keys`（**不推 GitHub**，防止外泄） |
-| 文件 | `qrscan.key`（私钥）+ `qrscan.key.pub`（公钥，已内嵌 `tauri.conf.json` pubkey） |
-| 拉取脚本 | `scripts/fetch-keys.sh`（自动从工程仓库 gitea remote 提取凭据克隆密钥仓库） |
-| 本地签名构建 | `bash scripts/fetch-keys.sh` 后 `TAURI_SIGNING_PRIVATE_KEY=$(cat /tmp/qrscan-keys/qrscan.key) cargo tauri build` |
-| CI | GitHub Secrets：`TAURI_SIGNING_PRIVATE_KEY` / `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`（由内网密钥库导出配置） |
+| 存放位置 | 仓库 `keys/`（`qrscan.key` 为 age 加密格式，无密码不可用） |
+| 文件 | `keys/qrscan.key`（签名私钥，age 加密）+ `keys/qrscan.key.pub`（公钥，已内嵌 `tauri.conf.json` pubkey） |
+| 本地签名构建 | `bash scripts/fetch-keys.sh` 后 `TAURI_SIGNING_PRIVATE_KEY=$(cat /tmp/qrscan-keys/qrscan.key) cargo tauri build`（解开 age 密钥的密码联系仓库维护者获取） |
+| CI | GitHub Secrets：`TAURI_SIGNING_PRIVATE_KEY` / `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`（自动化签名，协作者无需接触） |
 
 ## 目录结构
 
@@ -92,6 +93,8 @@ origin   git@github.com:Sakura-cool/QRScan.git           # 对外 + CI
 │       ├── zxing_reader.js   # zxing-wasm 读者端 JS 绑定（IIFE，全局 ZXingWASM）
 │       └── zxing_reader.wasm # zxing-wasm WebAssembly 引擎（本地文件）
 ├── src-tauri/                # Tauri 2 壳工程
+├── keys/                     # 更新签名密钥（公开，本地打包才需要）
+├── scripts/                  # fetch-keys.sh 等辅助脚本
 ├── .package/                 # macOS 本地打包产物（{arm64,x86_64}/）
 └── .github/workflows/build.yml
 ```

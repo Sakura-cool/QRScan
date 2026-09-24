@@ -1,35 +1,13 @@
 #!/usr/bin/env bash
-# 从内网 Gitea 密钥仓库拉取更新签名密钥到临时目录（不入库）
+# 将仓库内公开的更新签名密钥复制到指定目录（本地签名打包用）
 # 用法：./scripts/fetch-keys.sh <dest_dir>   默认 /tmp/qrscan-keys
-# 凭据来源：QRSCAN_GITEA_URL（完整 URL，可含凭据）或 QRSCAN_GITEA_TOKEN，
-# 未设置时从工程仓库 gitea remote 提取内嵌凭据。
+# 说明：密钥（qrscan.key / qrscan.key.pub）已随仓库公开，仅本地签名打包时需要；
+#       CI 构建由 GitHub Secrets（TAURI_SIGNING_PRIVATE_KEY / PASSWORD）注入，无需本脚本。
+#       解开 qrscan.key 的密码需联系仓库维护者获取。
 set -euo pipefail
 DEST="${1:-/tmp/qrscan-keys}"
-KEYS_REPO="http://localhost:3002/admin/qrscan-keys.git"
-
-if [ -f "$DEST/qrscan.key" ]; then
-  echo "密钥已存在: $DEST/qrscan.key"
-  exit 0
-fi
-
-URL="${QRSCAN_GITEA_URL:-}"
-if [ -z "$URL" ]; then
-  TOKEN="${QRSCAN_GITEA_TOKEN:-}"
-  if [ -z "$TOKEN" ]; then
-    REMOTE="$(git -C "$(dirname "$0")/.." remote get-url gitea 2>/dev/null || true)"
-    TOKEN="$(echo "$REMOTE" | sed -E 's#^[a-z]+://([^@]*)@.*#\1#')"
-    [ "$TOKEN" = "$REMOTE" ] && TOKEN=""
-  fi
-  if [ -n "$TOKEN" ]; then
-    URL="http://${TOKEN}@localhost:3002/admin/qrscan-keys.git"
-  else
-    URL="$KEYS_REPO"
-  fi
-fi
+SRC="$(cd "$(dirname "$0")/.." && pwd)/keys"
 
 mkdir -p "$DEST"
-if ! git clone --depth 1 "$URL" "$DEST" 2>/dev/null; then
-  echo "克隆密钥仓库失败（需内网或配置 QRSCAN_GITEA_URL）" >&2
-  exit 1
-fi
-echo "密钥已拉取到: $DEST"
+cp "$SRC/qrscan.key" "$SRC/qrscan.key.pub" "$DEST/"
+echo "密钥已就绪: $DEST/qrscan.key（密码联系维护者获取）"

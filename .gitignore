@@ -14,5 +14,5 @@ icons/icon-source.png
 # 本地打包产物（.package 目录）
 /.package/
 
-# 签名密钥（私钥绝不入库；公钥已内嵌 tauri.conf.json）
-/.keys/
+# 临时拉取密钥目录（公开密钥已入 keys/，此处仅忽略本地临时副本）
+/tmp/qrscan-keys/
